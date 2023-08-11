@@ -97,13 +97,14 @@ class Move:
 
 class GameEngine:
     def __init__(self):
-        self.fileName = GameEngine.getDefaultEngineFile();
+        #self.fileName = GameEngine.getDefaultEngineFile();
+        self.fileName = None
         self.proc = None;
         self.move = Move();
         self.color = Move.NONE;
         self.setName('Unknown');
 
-    def getDefaultEngineFile():
+        '''def getDefaultEngineFile():
         # Check the os, supported Linux/Mac/Windows.
         defaultEngineFile = '';
         if os.name == 'nt':
@@ -117,8 +118,8 @@ class GameEngine:
             else:
                 print('Not supported OS');
                 exit(-1);
-        return defaultEngineFile;
-
+        return defaultEngineFile;'''
+        
     def init(self, fileName = None, depth = None, vcf = None):
         self.release();
 
@@ -249,7 +250,8 @@ class App(Frame):
 
     def destroy(self):
         self.gameState = GameState.Exit;
-        self.gameEngine.release();
+        self.gameEngineBlack.release();
+        self.gameEngineWhite.release();
         self.searchThread.join();
         Frame.destroy(self);
 
@@ -299,7 +301,8 @@ class App(Frame):
         self.faces['lose'] = lost;
 
         # Game engines
-        self.gameEngine = GameEngine();
+        self.gameEngineBlack = GameEngine();
+        self.gameEngineWhite = GameEngine();
         self.searchThread = Thread(target = self.searching);
         self.searchThread.start();
 
@@ -356,15 +359,21 @@ class App(Frame):
         labelframe.newBtn.pack(side=TOP, fill=X);
         labelframe.backBtn = Button(labelframe, text='Back Move', command=self.backMove);
         labelframe.backBtn.pack(fill=X);
-        labelframe.loadBtn = Button(labelframe, text='Load Engine', command=self.loadGameEngine);
+        #Load engines
+        labelframe.loadBtn = Button(labelframe, text='Load Engine Black', command=self.loadGameEngineBlack);
         labelframe.loadBtn.pack(fill=BOTH);
+        labelframe.loadBtn2 = Button(labelframe, text='Load Engine White', command=self.loadGameEngineWhite);
+        labelframe.loadBtn2.pack(fill=BOTH);
+        
         labelframe.quitBtn = Button(labelframe, text='Quit Game', command=self.master.destroy);
         labelframe.quitBtn.pack(fill=X);
 
         self.controlFrame.aiStatus = labelframe = LabelFrame(self.controlFrame, text='AI Status');
         labelframe.pack(side=BOTTOM, fill=BOTH, expand="yes");
-        labelframe.name = Label(labelframe, text='AI Name');
-        labelframe.name.pack(side=TOP, anchor = W);
+        labelframe.nameBlack = Label(labelframe, text='AI B Name');
+        labelframe.nameBlack.pack(side=TOP, anchor = W);
+        labelframe.nameWhite = Label(labelframe, text='AI W Name');
+        labelframe.nameWhite.pack(side=TOP, anchor = W);
         labelframe.image = Label(labelframe, image=self.images['smile']);
         labelframe.image.pack(side=TOP, anchor = W);
         labelframe.info = Label(labelframe, text='');
@@ -381,24 +390,38 @@ class App(Frame):
         # print('VCF', vcf);
         return vcf;
 
-    def loadGameEngine(self):
-        fileName = filedialog.askopenfilename(title='Load executable file for new game engine ', initialdir='engines');
-        print('Load game engine:', fileName);
+    def loadGameEngineBlack(self):
+        fileName = filedialog.askopenfilename(title='Load executable file for new game engine black ', initialdir='engines');
+        print('Load game engine black:', fileName);
         if len(fileName) > 0:
             try:
-                self.initGameEngine(fileName);
+                self.initGameEngine(self.gameEngineBlack, Move.BLACK, fileName);
+            except Exception as e:
+                messagebox.showinfo("Error","Error to load the engine: " + fileName + ",\n errors: " + str(e));
+                
+    def loadGameEngineWhite(self):
+        fileName = filedialog.askopenfilename(title='Load executable file for new game engine white ', initialdir='engines');
+        print('Load game engine white:', fileName);
+        if len(fileName) > 0:
+            try:
+                self.initGameEngine(self.gameEngineWhite, Move.WHITE, fileName);
             except Exception as e:
                 messagebox.showinfo("Error","Error to load the engine: " + fileName + ",\n errors: " + str(e));
 
-    def initGameEngine(self, fileName=''):
-        self.gameEngine.init(fileName, self.aiLevel.get(), self.isVcf());
+    def initGameEngine(self, currGameEngine, move, fileName=''):
+        currGameEngine.init(fileName, self.aiLevel.get(), self.isVcf());
         # Change the engine name
-        shortName = self.gameEngine.shortName.capitalize();
-        self.controlFrame.aiLevel['text'] = shortName + ' AI Level';
-        self.controlFrame.selectBlack.engineRBtn['text'] = shortName;
-        self.controlFrame.selectWhite.engineRBtn['text'] = shortName;
-        name = self.gameEngine.name.capitalize();
-        self.controlFrame.aiStatus.name['text'] = name;
+        shortName = currGameEngine.shortName.capitalize();
+        self.controlFrame.aiLevel['text'] = 'AI Level';
+        
+        name = currGameEngine.name.capitalize();
+        
+        if move == Move.BLACK:
+            self.controlFrame.aiStatus.nameBlack['text'] = name;
+            self.controlFrame.selectBlack.engineRBtn['text'] = shortName;
+        elif move == Move.WHITE:
+            self.controlFrame.aiStatus.nameWhite['text'] = name;
+            self.controlFrame.selectWhite.engineRBtn['text'] = shortName;
         #root.title('Cloudict.Connect6 - ' + name);
 
     def createBoardUnit(self, x, y, imageKey):
@@ -513,11 +536,11 @@ class App(Frame):
             color = Move.WHITE;
         return color;
 
-    def waitForMove(self):
+    def waitForMove(self, currGameEngine):
         color = self.nextColor();
         while True:
             # print('waitForMove');
-            msg = self.gameEngine.waitForNextMsg();
+            msg = currGameEngine.waitForNextMsg();
             # print('Msg:', msg);
             move = Move.fromCmd(msg, color);
             # print('Wait move:', move);
@@ -534,9 +557,16 @@ class App(Frame):
                     break;
                 if self.gameMode == GameState.AI2AI or self.gameMode == GameState.AI2Human:
                     if self.gameState == GameState.WaitForEngine:
-                        self.gameEngine.next(self.moveList);
-                        move = self.waitForMove();
-                        self.gameEngine.color = move.color;
+                        color = self.nextColor()
+                        currEngine = None
+                        if(color == Move.BLACK):
+                            currEngine = self.gameEngineBlack;
+                        else:
+                            currEngine = self.gameEngineWhite;
+                            
+                        currEngine.next(self.moveList);
+                        move = self.waitForMove(currEngine);
+                        currEngine.color = move.color;
                         self.makeMove(move);
                         if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
                             self.toGameState(GameState.WaitForHumanFirst);
@@ -560,20 +590,26 @@ class App(Frame):
 
         msg = 'Press start to game.';
         if self.gameState == GameState.Win:
-            if self.winner == self.gameEngine.color:
-                msg = 'I win!';
-            else:
-                msg = 'I lose!';
+            if self.winner == Move.BLACK:
+                msg = 'Black Wins!';
+            elif self.winner == Move.WHITE:
+                msg = 'White Wins!';
         elif self.gameState == GameState.WaitForHumanFirst:
             msg = 'Move the first...';
         elif self.gameState == GameState.WaitForHumanSecond:
             msg = 'Move the second...';
         elif self.gameState == GameState.WaitForEngine:
-            msg = 'Thinking.';
             # Check format: Searching 31/37
-
-            if self.gameEngine.msg.startswith('Searching '):
-                s = self.gameEngine.msg.split(' ')[1];
+            currentEngine = None
+            if self.nextColor() == Move.BLACK:
+                currentEngine = self.gameEngineBlack;
+            else:
+                currentEngine = self.gameEngineWhite;
+                
+            msg = currentEngine.name+' Thinking.';
+            
+            if currentEngine.msg.startswith('Searching '):
+                s = currentEngine.msg.split(' ')[1];
                 ls = s.split('/');
                 cnt = float(ls[0])/float(ls[1]) * 15;
                 msg += '.' * int(cnt);
@@ -588,7 +624,8 @@ class App(Frame):
         return Move.NONE;
 
     def newGame(self):
-        self.gameEngine.release();
+        #self.gameEngineBlack.release();
+        #self.gameEngineWhite.release();
         self.initBoard();
         black = self.blackSelected.get().strip();
         white = self.whiteSelected.get().strip();
@@ -597,14 +634,16 @@ class App(Frame):
             self.toGameState(GameState.WaitForHumanFirst);
         elif black != '' and white != '':
             self.toGameMode(GameState.AI2AI);
-            self.initGameEngine();
+            #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
+            #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
             self.toGameState(GameState.WaitForEngine);
         else:
-            self.initGameEngine();
             self.toGameMode(GameState.AI2Human);
             if black != '':
+                #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
                 self.toGameState(GameState.WaitForEngine);
             else:
+                #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
                 self.toGameState(GameState.WaitForHumanFirst);
 
     def addToMoveList(self, move):
