@@ -160,6 +160,9 @@ class GameEngine:
         self.move.invalidate();
 
         return True;
+        
+    def isReady(self):
+        return self.proc != None
 
     def setName(self, name):
         self.name = self.shortName = name;
@@ -633,18 +636,32 @@ class App(Frame):
             self.toGameMode(GameState.Human2Human);
             self.toGameState(GameState.WaitForHumanFirst);
         elif black != '' and white != '':
-            self.toGameMode(GameState.AI2AI);
-            #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
-            #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
-            self.toGameState(GameState.WaitForEngine);
-        else:
-            self.toGameMode(GameState.AI2Human);
-            if black != '':
-                #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
-                self.toGameState(GameState.WaitForEngine);
+            #Check engines are ready
+            if(not self.gameEngineBlack.isReady()):
+                messagebox.showinfo("Error","Black engine is not ready");
+            elif (not self.gameEngineWhite.isReady()):
+                messagebox.showinfo("Error","White engine is not ready");
             else:
+                self.toGameMode(GameState.AI2AI);
+                #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
                 #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
-                self.toGameState(GameState.WaitForHumanFirst);
+                self.toGameState(GameState.WaitForEngine);
+        else:
+            
+            if black != '':
+                if(not self.gameEngineBlack.isReady()):
+                    messagebox.showinfo("Error","Black engine is not ready");
+                else:
+                    #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
+                    self.toGameState(GameState.WaitForEngine);
+                    self.toGameMode(GameState.AI2Human);
+            else:
+                if(not self.gameEngineWhite.isReady()):
+                    messagebox.showinfo("Error","White engine is not ready");
+                else:
+                    #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
+                    self.toGameState(GameState.WaitForHumanFirst);
+                    self.toGameMode(GameState.AI2Human);
 
     def addToMoveList(self, move):
         # Rerender pre move
@@ -681,9 +698,9 @@ class App(Frame):
             self.winner = color;
             self.toGameState(GameState.Win);
             if color == Move.BLACK:
-                messagebox.showinfo("Black Win", "Black Win;) Impressive!")
+                messagebox.showinfo("Black Win", "Black Win ;) Impressive!")
             else:
-                messagebox.showinfo("White Win", "White Win;) Impressive!")
+                messagebox.showinfo("White Win", "White Win ;) Impressive!")
 
     def placeColor(self, color, x, y, extra = ''):
         if color == Move.BLACK:
