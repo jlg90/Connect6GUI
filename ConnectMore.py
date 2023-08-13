@@ -571,8 +571,9 @@ class App(Frame):
                         move = self.waitForMove(currEngine);
                         currEngine.color = move.color;
                         self.makeMove(move);
-                        if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
-                            self.toGameState(GameState.WaitForHumanFirst);
+                        if(self.gameState != GameState.Win):
+                            if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
+                                self.toGameState(GameState.WaitForHumanFirst);
                     else:
                         sleep(0.1);
                 else:
@@ -736,21 +737,24 @@ class App(Frame):
                 self.move = Move(color, x, y, x, y);
                 self.placeStone(self.move.color, x, y);
                 self.addToMoveList(self.move);
-                self.toGameState(GameState.WaitForHumanFirst);
+                if(self.gameState != GameState.Win):
+                    self.toGameState(GameState.WaitForHumanFirst);
                 
             elif self.gameState == GameState.WaitForHumanFirst:
                 self.move = Move(color, x, y);
                 self.placeStone(self.move.color, x, y);
-                if self.gameState == GameState.WaitForHumanFirst:
-                    self.toGameState(GameState.WaitForHumanSecond);
+                if(self.gameState != GameState.Win):
+                    if self.gameState == GameState.WaitForHumanFirst:
+                        self.toGameState(GameState.WaitForHumanSecond);
                 
             elif self.gameState == GameState.WaitForHumanSecond:
                 self.move.x2 = x;
                 self.move.y2 = y;
                 self.placeStone(self.move.color, x, y);
                 self.addToMoveList(self.move);
-                if self.gameState == GameState.WaitForHumanSecond:
-                    self.toGameState(GameState.WaitForHumanFirst);
+                if(self.gameState != GameState.Win):
+                    if self.gameState == GameState.WaitForHumanSecond:
+                        self.toGameState(GameState.WaitForHumanFirst);
             
             return ;
         
@@ -762,21 +766,24 @@ class App(Frame):
                 self.move = Move(color, x, y, x, y);
                 self.addToMoveList(self.move);
                 self.placeStone(self.move.color, x, y);
-                self.toGameState(GameState.WaitForEngine);
+                if(self.gameState != GameState.Win):
+                    self.toGameState(GameState.WaitForEngine);
                 
             elif self.gameState == GameState.WaitForHumanFirst:
                 self.move = Move(color, x, y);
                 self.placeStone(self.move.color, x, y);
-                if self.gameState == GameState.WaitForHumanFirst:
-                    self.toGameState(GameState.WaitForHumanSecond);
+                if(self.gameState != GameState.Win):
+                    if self.gameState == GameState.WaitForHumanFirst:
+                        self.toGameState(GameState.WaitForHumanSecond);
                     
             elif self.gameState == GameState.WaitForHumanSecond:
                 self.move.x2 = x;
                 self.move.y2 = y;
                 self.placeStone(self.move.color, x, y);
                 self.addToMoveList(self.move);
-                if self.gameState == GameState.WaitForHumanSecond:
-                    self.toGameState(GameState.WaitForEngine);
+                if(self.gameState != GameState.Win):
+                    if self.gameState == GameState.WaitForHumanSecond:
+                        self.toGameState(GameState.WaitForEngine);
 
         return ;
         
