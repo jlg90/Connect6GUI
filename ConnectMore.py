@@ -244,6 +244,8 @@ class App(Frame):
         # Game state: -1 -> quit, 0 -> first, 1 -> second, 2 -> gameEngine 3;
         self.gameMode = GameState.Idle;
         self.gameState = GameState.Idle;
+        self.fileNameBlack = None
+        self.fileNameWhite = None
 
         self.initResource();
 
@@ -394,22 +396,26 @@ class App(Frame):
         return vcf;
 
     def loadGameEngineBlack(self):
-        fileName = filedialog.askopenfilename(title='Load executable file for new game engine black ', initialdir='engines');
-        print('Load game engine black:', fileName);
-        if len(fileName) > 0:
+        self.fileNameBlack = filedialog.askopenfilename(title='Load executable file for new game engine black ', initialdir='engines');
+        print('Load game engine black:', self.fileNameBlack);
+        if len(self.fileNameBlack) > 0:
             try:
-                self.initGameEngine(self.gameEngineBlack, Move.BLACK, fileName);
+                self.initGameEngine(self.gameEngineBlack, Move.BLACK, self.fileNameBlack);
+                self.gameEngineBlack.release();
             except Exception as e:
-                messagebox.showinfo("Error","Error to load the engine: " + fileName + ",\n errors: " + str(e));
+                messagebox.showinfo("Error","Error to load the engine: " + self.fileNameBlack + ",\n errors: " + str(e));
+                fileNameBlack = None
                 
     def loadGameEngineWhite(self):
-        fileName = filedialog.askopenfilename(title='Load executable file for new game engine white ', initialdir='engines');
-        print('Load game engine white:', fileName);
-        if len(fileName) > 0:
+        self.fileNameWhite = filedialog.askopenfilename(title='Load executable file for new game engine white ', initialdir='engines');
+        print('Load game engine white:', self.fileNameWhite);
+        if len(self.fileNameWhite) > 0:
             try:
-                self.initGameEngine(self.gameEngineWhite, Move.WHITE, fileName);
+                self.initGameEngine(self.gameEngineWhite, Move.WHITE, self.fileNameWhite);
+                self.gameEngineWhite.release();
             except Exception as e:
-                messagebox.showinfo("Error","Error to load the engine: " + fileName + ",\n errors: " + str(e));
+                messagebox.showinfo("Error","Error to load the engine: " + self.fileNameWhite + ",\n errors: " + str(e));
+                fileNameWhite = None
 
     def initGameEngine(self, currGameEngine, move, fileName=''):
         currGameEngine.init(fileName, self.aiLevel.get(), self.isVcf());
@@ -628,8 +634,8 @@ class App(Frame):
         return Move.NONE;
 
     def newGame(self):
-        #self.gameEngineBlack.release();
-        #self.gameEngineWhite.release();
+        self.gameEngineBlack.release();
+        self.gameEngineWhite.release();
         self.initBoard();
         black = self.blackSelected.get().strip();
         white = self.whiteSelected.get().strip();
@@ -638,29 +644,29 @@ class App(Frame):
             self.toGameState(GameState.WaitForHumanFirst);
         elif black != '' and white != '':
             #Check engines are ready
-            if(not self.gameEngineBlack.isReady()):
+            if(not self.fileNameBlack):
                 messagebox.showinfo("Error","Black engine is not ready");
-            elif (not self.gameEngineWhite.isReady()):
+            elif (not self.fileNameWhite):
                 messagebox.showinfo("Error","White engine is not ready");
             else:
                 self.toGameMode(GameState.AI2AI);
-                #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
-                #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
+                self.initGameEngine(self.gameEngineBlack, Move.BLACK, self.fileNameBlack);
+                self.initGameEngine(self.gameEngineWhite, Move.WHITE, self.fileNameWhite);
                 self.toGameState(GameState.WaitForEngine);
         else:
             
             if black != '':
-                if(not self.gameEngineBlack.isReady()):
+                if(not self.fileNameBlack):
                     messagebox.showinfo("Error","Black engine is not ready");
                 else:
-                    #self.initGameEngine(self.gameEngineBlack, Move.BLACK);
+                    self.initGameEngine(self.gameEngineBlack, Move.BLACK, self.fileNameBlack);
                     self.toGameState(GameState.WaitForEngine);
                     self.toGameMode(GameState.AI2Human);
             else:
-                if(not self.gameEngineWhite.isReady()):
+                if(not self.fileNameWhite):
                     messagebox.showinfo("Error","White engine is not ready");
                 else:
-                    #self.initGameEngine(self.gameEngineWhite, Move.WHITE);
+                    self.initGameEngine(self.gameEngineWhite, Move.WHITE, self.fileNameWhite);
                     self.toGameState(GameState.WaitForHumanFirst);
                     self.toGameMode(GameState.AI2Human);
 
