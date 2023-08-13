@@ -693,8 +693,10 @@ class App(Frame):
 
     def makeMove(self, move):
         if move.isValidated():
-            self.placeStone(move.color, move.x1, move.y1);
-            self.placeStone(move.color, move.x2, move.y2);
+            if(self.gameState != GameState.Win):
+                self.placeStone(move.color, move.x1, move.y1);
+            if(self.gameState != GameState.Win):
+                self.placeStone(move.color, move.x2, move.y2);
             self.addToMoveList(move);
             # print('Made move:', move);
         return move;
