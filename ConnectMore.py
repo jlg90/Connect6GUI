@@ -702,6 +702,10 @@ class App(Frame):
         return move;
 
     def placeStone(self, color, x, y):
+        #Check illegal move
+        if not self.isNoneStone(x, y):
+            return
+    
         self.placeColor(color, x, y, 't');
         if self.connectedBy(x, y):
             self.winner = color;
