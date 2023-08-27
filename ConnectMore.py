@@ -436,7 +436,7 @@ class App(Frame):
                     if self.gameMode == GameState.AI2AI or self.gameMode == GameState.AI2Human:
                         if self.gameState == GameState.WaitForEngine:
                             color = self.nextColor()
-                            print(len(self.moveList), color)
+                            #print(len(self.moveList), color)
                             currEngine = None
                             if(color == Move.BLACK):
                                 currEngine = self.currentGame.black.engine;
@@ -587,10 +587,10 @@ class App(Frame):
 
     def makeMove(self, move):
         if move.isValidated():
-            self.addToMoveList(move);
             if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
-                self.placeStone(move.color, move.x1, move.y1);
-                if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
+                self.addToMoveList(move);
+                nextValidMove = self.placeStone(move.color, move.x1, move.y1);
+                if(nextValidMove):
                     self.placeStone(move.color, move.x2, move.y2);
                 else:
                     move.x2 = move.x1
@@ -601,7 +601,7 @@ class App(Frame):
     def placeStone(self, color, x, y):
         #Check illegal move
         if not self.isNoneStone(x, y):
-            return
+            return True
     
         self.placeColor(color, x, y, 't');
         
@@ -614,6 +614,7 @@ class App(Frame):
             else:
                 if self.showDisplayMsg:
                     messagebox.showinfo("White Win", "White Win ;) Impressive!")
+            return False
              
         self.remainingMoves = self.remainingMoves-1;   
         if self.remainingMoves == 0:
@@ -621,6 +622,9 @@ class App(Frame):
             self.toGameState(GameState.Draw);
             if self.showDisplayMsg:
                 messagebox.showinfo("Draw", "Draw ;) Impressive!")
+            return False
+            
+        return True
 
     def placeColor(self, color, x, y, extra = ''):
         if color == Move.BLACK:
