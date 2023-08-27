@@ -167,6 +167,7 @@ class GameEngine:
                 self.proc = None;
                 break;
         self.move.invalidate();
+        self.msg = None
 
     def next(self, moveList = []):
         if self.proc != None:

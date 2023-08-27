@@ -139,6 +139,35 @@ class Tournament:
         reader = PlayerReader()
         self.players = reader.read_from_file(f)
         
+    def save_results(self, f):
+        #Print players
+        f.write('Players:\n')
+        for player in self.players:
+            f.write(player.name)
+            f.write(";")
+        f.write("\n")
+        
+        #Print games
+        f.write('Games:\n')
+        for game in self.games:
+            black = game.black
+            white = game.white
+            f.write(black.name)
+            f.write(";")
+            f.write(white.name)
+            f.write(";")
+            f.write(str(game.result))
+            f.write(";")
+            
+            #Write moves
+            for move in game.moves:
+                move = move.toPlaceCmd().strip()+" "
+                f.write(move)
+            
+            f.write('\n')
+            
+            
+        
 class RoundRobinTournament(Tournament):
     def __init__(self, repetitions = 1):
         super().__init__()

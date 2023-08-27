@@ -22,6 +22,7 @@ import os;
 import random;
 from tournament import *
 from engine import *
+import copy
 
 if os.name == 'nt':
     from subprocess import STARTUPINFO;
@@ -181,6 +182,8 @@ class App(Frame):
         labelframe.loadBtn.pack(side=TOP, fill=X);
         labelframe.newBtn = Button(labelframe, text='Start Games', command=self.startTournamentGames);
         labelframe.newBtn.pack(side=TOP, fill=X);
+        labelframe.newBtn = Button(labelframe, text='Save results', command=self.saveTournamentGames);
+        labelframe.newBtn.pack(side=TOP, fill=X);
         
 
         self.controlFrame.aiStatus = labelframe = LabelFrame(self.controlFrame, text='AI Status');
@@ -230,6 +233,18 @@ class App(Frame):
             except Exception as e:
                 messagebox.showinfo("Error","Error to generate tournament from: " + path + ",\n errors: " + str(e));
                 self.tournament = Tournament()
+                
+    def saveTournamentGames(self):
+        f = filedialog.asksaveasfile(mode='w', defaultextension=".txt", title='Save tournament file ', initialdir='tournaments');
+        if f is None: # asksaveasfile return `None` if dialog closed with "cancel".
+            return
+            
+        print('Saving tournament results');
+        try:
+            self.tournament.save_results(f)
+            f.close()
+        except Exception as e:
+            messagebox.showinfo("Error","Error to save tournament. \n errors: " + str(e));
     
     #Gnerate games from tournament            
     def startTournamentGames(self):
@@ -411,31 +426,40 @@ class App(Frame):
             
         return move
 
+    #Threaded search
     def searching(self):
         while True:
             try:
                 if self.gameState == GameState.Exit:
                     break;
-                if self.gameMode == GameState.AI2AI or self.gameMode == GameState.AI2Human:
-                    if self.gameState == GameState.WaitForEngine:
-                        color = self.nextColor()
-                        currEngine = None
-                        if(color == Move.BLACK):
-                            currEngine = self.currentGame.black.engine;
-                        else:
-                            currEngine = self.currentGame.white.engine;
+                if(self.gameState != GameState.Win and self.gameState != GameState.Draw and self.gameState != GameState.Idle):
+                    if self.gameMode == GameState.AI2AI or self.gameMode == GameState.AI2Human:
+                        if self.gameState == GameState.WaitForEngine:
+                            color = self.nextColor()
+                            print(len(self.moveList), color)
+                            currEngine = None
+                            if(color == Move.BLACK):
+                                currEngine = self.currentGame.black.engine;
+                            else:
+                                currEngine = self.currentGame.white.engine;
+                                
+                            currEngine.next(self.moveList);
+                            move = self.waitForMove(currEngine);
+                            currEngine.color = move.color;
+                                
+                            if(self.gameState != GameState.Win and self.gameState != GameState.Draw and self.gameState != GameState.Idle):
+                                self.makeMove(move);
+                                if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
+                                    self.toGameState(GameState.WaitForHumanFirst);
+                                    
+                            sleep(0.1)
                             
-                        currEngine.next(self.moveList);
-                        move = self.waitForMove(currEngine);
-                        currEngine.color = move.color;
-                        self.makeMove(move);
-                        if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
-                            if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
-                                self.toGameState(GameState.WaitForHumanFirst);
+                        else:
+                            sleep(0.1);
                     else:
-                        sleep(0.1);
+                        sleep(0.2);
                 else:
-                    sleep(0.2);
+                    sleep(0.1)
             except Exception as e:
                 print('Exception when searching: ' + str(e));
                 sleep(0.5);
@@ -466,10 +490,12 @@ class App(Frame):
             self.currentGame.result = self.winner
             
             nextGame = self.tournament.next_game()
+                            
             if nextGame is None:
                 self.currentGame = self.predefGame
             else:
                 self.currentGame = nextGame
+                sleep(1.0)
                 self.newGame()
             
         elif self.gameState == GameState.WaitForHumanFirst:
@@ -506,10 +532,12 @@ class App(Frame):
         white = self.currentGame.white
                
         if black.type == Player.BOT:
-            self.controlFrame.aiStatus.nameBlack['text'] = black.get_short_name().capitalize();
+            self.controlFrame.aiStatus.nameBlack['text'] = black.get_short_name().capitalize().strip();
+            self.currentGame.black.name = black.get_name().capitalize().strip();
             #self.controlFrame.selectBlack.engineRBtn['text'] = black.get_name().capitalize();
         if white.type == Player.BOT:
-            self.controlFrame.aiStatus.nameWhite['text'] = white.get_short_name().capitalize();
+            self.controlFrame.aiStatus.nameWhite['text'] = white.get_short_name().capitalize().strip();
+            self.currentGame.white.name = white.get_name().capitalize().strip();
             #self.controlFrame.selectWhite.engineRBtn['text'] = white.get_name().capitalize();
 
     def newGame(self):
@@ -559,11 +587,14 @@ class App(Frame):
 
     def makeMove(self, move):
         if move.isValidated():
+            self.addToMoveList(move);
             if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
                 self.placeStone(move.color, move.x1, move.y1);
-            if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
-                self.placeStone(move.color, move.x2, move.y2);
-            self.addToMoveList(move);
+                if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
+                    self.placeStone(move.color, move.x2, move.y2);
+                else:
+                    move.x2 = move.x1
+                    move.y2 = move.y1
             # print('Made move:', move);
         return move;
 
@@ -589,7 +620,7 @@ class App(Frame):
             self.winner = Move.NONE;
             self.toGameState(GameState.Draw);
             if self.showDisplayMsg:
-                    messagebox.showinfo("Draw", "Draw ;) Impressive!")
+                messagebox.showinfo("Draw", "Draw ;) Impressive!")
 
     def placeColor(self, color, x, y, extra = ''):
         if color == Move.BLACK:
