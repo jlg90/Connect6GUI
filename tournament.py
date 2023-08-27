@@ -32,6 +32,9 @@ class Player:
     def is_ready(self):
         return False
         
+    def release(self):
+        return;
+        
 class HumanPlayer(Player):
     def __init__(self):
         super().__init__()
@@ -108,10 +111,9 @@ class Game:
 
 class Tournament:
 
-    def __init__(self, repetitions = 1):
+    def __init__(self):
         self.players = []
         self.games = []
-        self.repetitions = repetitions
         
     def add_player(self, player):
         self.players.append(player)
@@ -124,12 +126,7 @@ class Tournament:
         
     def generate_games(self):
         self.games = []
-        for p1 in players:
-            for p2 in players:
-                if p1 != p2:
-                    for i in range(0, self.repetitions):
-                        game = Game(p1,p2)
-                        self.games.append(game)
+        return;
                         
     def next_game(self):
         for game in self.games:
@@ -137,7 +134,62 @@ class Tournament:
                 return game
         
         return None
-                        
+        
+    def load_from_file(self, f):
+        reader = PlayerReader()
+        self.players = reader.read_from_file(f)
+        
+class RoundRobinTournament(Tournament):
+    def __init__(self, repetitions = 1):
+        super().__init__()
+        self.repetitions = repetitions
+        
+    def generate_games(self):
+        self.games = []
+        for p1 in self.players:
+            for p2 in self.players:
+                if p1 != p2:
+                    for i in range(0, self.repetitions):
+                        game = Game(p1,p2)
+                        self.games.append(game)
+        
+        return None
+        
+class PlayerReader:
+
+    def __init__(self):
+        return
+        
+    def read_from_file(self, path):
+        # Using readline()
+        file1 = open(path, 'r')
+        players = []
+         
+        while True:
+         
+            # Get next line from file
+            line = file1.readline()
+         
+            # if line is empty
+            # end of file is reached
+            if not line:
+                break
+            
+            #Create player from file
+            player = BotPlayer()
+            player.path = line.strip()
+            
+            try:
+                player.start_player(Move.BLACK, 1, True);
+                player.release()
+                players.append(player)
+            except Exception as e:
+                print("Error to load the engine: " + player.path + ", errors: " + str(e));
+             
+        file1.close()
+        return players
+        
+            
     
                         
                     

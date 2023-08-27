@@ -28,7 +28,7 @@ if os.name == 'nt':
 
 class App(Frame):
     
-        
+
     def __init__(self, master=None):
         Frame.__init__(self, master, width=640, height=700)
         self.pack();
@@ -45,6 +45,9 @@ class App(Frame):
         
         #Current game
         self.currentGame = self.predefGame
+        
+        #Tournament
+        self.tournament = Tournament()
 
         self.initResource();
 
@@ -56,6 +59,7 @@ class App(Frame):
         self.gameState = GameState.Exit;
         self.botPlayerBlack.release();
         self.botPlayerWhite.release();
+        self.currentGame.release();
         self.searchThread.join();
         Frame.destroy(self);
 
@@ -107,6 +111,7 @@ class App(Frame):
         # Searching thread
         self.searchThread = Thread(target = self.searching);
         self.searchThread.start();
+        self.showDisplayMsg = True
 
         # Widgets
         self.canvas = Canvas(self, width=640, height=640);
@@ -156,20 +161,27 @@ class App(Frame):
         labelframe.engineRBtn = Radiobutton(labelframe, text="AI", value=1, variable=self.whiteOption,command=self.setWhiteBot);
         labelframe.engineRBtn.pack( anchor = W );
         
-        self.controlFrame.gameContral = labelframe = LabelFrame(self.controlFrame, text='Game Contral');
+        self.controlFrame.gameContral = labelframe = LabelFrame(self.controlFrame, text='Game Control');
         labelframe.pack(fill=X, expand=1);
-        labelframe.newBtn = Button(labelframe, text='Start Game', command=self.newGame);
+        labelframe.newBtn = Button(labelframe, text='Start Game', command=self.newSingleGame);
         labelframe.newBtn.pack(side=TOP, fill=X);
         labelframe.backBtn = Button(labelframe, text='Back Move', command=self.backMove);
         labelframe.backBtn.pack(fill=X);
         #Load engines
-        labelframe.loadBtn = Button(labelframe, text='Load Engine Black', command=self.loadGameEngineBlack);
+        labelframe.loadBtn = Button(labelframe, text='Load Black Engine', command=self.loadGameEngineBlack);
         labelframe.loadBtn.pack(fill=BOTH);
-        labelframe.loadBtn2 = Button(labelframe, text='Load Engine White', command=self.loadGameEngineWhite);
+        labelframe.loadBtn2 = Button(labelframe, text='Load White Engine', command=self.loadGameEngineWhite);
         labelframe.loadBtn2.pack(fill=BOTH);
-        
         labelframe.quitBtn = Button(labelframe, text='Quit Game', command=self.master.destroy);
         labelframe.quitBtn.pack(fill=X);
+        
+        self.controlFrame.tournament = labelframe = LabelFrame(self.controlFrame, text='Tournament');
+        labelframe.pack(fill=X, expand=1);
+        labelframe.loadBtn = Button(labelframe, text='Load Tournament', command=self.loadTournament);
+        labelframe.loadBtn.pack(side=TOP, fill=X);
+        labelframe.newBtn = Button(labelframe, text='Start Games', command=self.startTournamentGames);
+        labelframe.newBtn.pack(side=TOP, fill=X);
+        
 
         self.controlFrame.aiStatus = labelframe = LabelFrame(self.controlFrame, text='AI Status');
         labelframe.pack(side=BOTTOM, fill=BOTH, expand="yes");
@@ -183,6 +195,10 @@ class App(Frame):
         labelframe.info.pack(side=BOTTOM, anchor = W);
 
         self.updateStatus();
+        
+    def newSingleGame(self):
+        self.showDisplayMsg = True
+        self.newGame()
         
     def setBlackHuman(self):
         self.predefGame.black = HumanPlayer()
@@ -202,6 +218,33 @@ class App(Frame):
             vcf = False;
         # print('VCF', vcf);
         return vcf;
+        
+    def loadTournament(self):
+        path = filedialog.askopenfilename(title='Load tournament file ', initialdir='tournaments');
+        print('Load tournament file:', path);
+        if len(path) > 0:
+            try:
+                self.tournament = RoundRobinTournament()
+                self.tournament.load_from_file(path)
+                print('Tournament loaded with ' + str(len(self.tournament.players)) + ' players')
+            except Exception as e:
+                messagebox.showinfo("Error","Error to generate tournament from: " + path + ",\n errors: " + str(e));
+                self.tournament = Tournament()
+    
+    #Gnerate games from tournament            
+    def startTournamentGames(self):
+        self.showDisplayMsg = False
+        self.tournament.generate_games()
+        
+        #Execute first game
+        game = self.tournament.next_game()
+        if game is None:
+            return
+                
+        self.currentGame = game
+        #Execute game
+        self.newGame()
+        
 
     def loadGameEngineBlack(self):
         self.botPlayerBlack.path = filedialog.askopenfilename(title='Load executable file for new game engine black ', initialdir='engines');
@@ -408,13 +451,27 @@ class App(Frame):
         self.controlFrame.aiStatus.info['text'] = '';
 
         msg = 'Press start to game.';
-        if self.gameState == GameState.Win:
+        
+        #Game finished
+        if self.gameState == GameState.Win or self.gameState == GameState.Draw:
             if self.winner == Move.BLACK:
                 msg = 'Black Wins!';
             elif self.winner == Move.WHITE:
                 msg = 'White Wins!';
-        elif self.gameState == GameState.Draw:
-            msg = "Draw!"
+            else:
+                msg = "Draw!"
+            
+            #Copy moves and result
+            self.currentGame.moves = self.moveList
+            self.currentGame.result = self.winner
+            
+            nextGame = self.tournament.next_game()
+            if nextGame is None:
+                self.currentGame = self.predefGame
+            else:
+                self.currentGame = nextGame
+                self.newGame()
+            
         elif self.gameState == GameState.WaitForHumanFirst:
             msg = 'Move the first...';
         elif self.gameState == GameState.WaitForHumanSecond:
@@ -443,6 +500,17 @@ class App(Frame):
         elif color == Move.WHITE:
             return Move.BLACK;
         return Move.NONE;
+        
+    def setBotNames(self):
+        black = self.currentGame.black
+        white = self.currentGame.white
+               
+        if black.type == Player.BOT:
+            self.controlFrame.aiStatus.nameBlack['text'] = black.get_short_name().capitalize();
+            #self.controlFrame.selectBlack.engineRBtn['text'] = black.get_name().capitalize();
+        if white.type == Player.BOT:
+            self.controlFrame.aiStatus.nameWhite['text'] = white.get_short_name().capitalize();
+            #self.controlFrame.selectWhite.engineRBtn['text'] = white.get_name().capitalize();
 
     def newGame(self):
         #Release engines
@@ -462,6 +530,7 @@ class App(Frame):
             
         #Prepare players
         self.currentGame.start_players(self.aiLevel.get(), self.isVcf())
+        self.setBotNames()
         
         mode, next_state = self.currentGame.get_game_state()
         self.toGameMode(mode)
@@ -509,14 +578,18 @@ class App(Frame):
             self.winner = color;
             self.toGameState(GameState.Win);
             if color == Move.BLACK:
-                messagebox.showinfo("Black Win", "Black Win ;) Impressive!")
+                if self.showDisplayMsg:
+                    messagebox.showinfo("Black Win", "Black Win ;) Impressive!")
             else:
-                messagebox.showinfo("White Win", "White Win ;) Impressive!")
+                if self.showDisplayMsg:
+                    messagebox.showinfo("White Win", "White Win ;) Impressive!")
              
         self.remainingMoves = self.remainingMoves-1;   
         if self.remainingMoves == 0:
             self.winner = Move.NONE;
             self.toGameState(GameState.Draw);
+            if self.showDisplayMsg:
+                    messagebox.showinfo("Draw", "Draw ;) Impressive!")
 
     def placeColor(self, color, x, y, extra = ''):
         if color == Move.BLACK:
