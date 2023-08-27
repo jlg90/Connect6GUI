@@ -1,5 +1,21 @@
 from engine import *
 
+class GameState:
+
+    Exit = -1;
+
+    Idle = 0;
+    AI2AI = 1;
+    AI2Human = 2
+    Human2Human = 3;
+
+    WaitForEngine = 1;
+    WaitForHumanFirst = 2;
+    WaitForHumanSecond = 3;
+
+    Win = 4;
+    Draw = 5;
+
 class Player:
     HUMAN = 0
     BOT = 1
@@ -61,6 +77,34 @@ class Game:
         self.white = white
         self.result = -1
         self.moves = []
+        
+    def release(self):
+        self.black.release()
+        self.white.release()
+        self.result = -1
+        self.moves = []
+        
+    def is_ready(self):
+        return self.black.is_ready(), self.white.is_ready()
+        
+    def start_players(self, level, vcf):
+        self.black.start_player(Move.BLACK, level, vcf)
+        self.white.start_player(Move.WHITE, level, vcf)
+        
+        #Return mode and next state
+    def get_game_state(self):
+        black_t = self.black.type
+        white_t = self.white.type
+        
+        if black_t == Player.HUMAN and white_t == Player.HUMAN:
+            return GameState.Human2Human, GameState.WaitForHumanFirst
+        elif black_t == Player.BOT and white_t == Player.BOT:
+            return GameState.AI2AI, GameState.WaitForEngine
+        else:
+            if black_t == Player.BOT:
+                return GameState.AI2Human, GameState.WaitForEngine
+            else:
+                return GameState.AI2Human, GameState.WaitForHumanFirst
 
 class Tournament:
 

@@ -25,22 +25,6 @@ from engine import *
 
 if os.name == 'nt':
     from subprocess import STARTUPINFO;
-    
-class GameState:
-
-    Exit = -1;
-
-    Idle = 0;
-    AI2AI = 1;
-    AI2Human = 2
-    Human2Human = 3;
-
-    WaitForEngine = 1;
-    WaitForHumanFirst = 2;
-    WaitForHumanSecond = 3;
-
-    Win = 4;
-    Draw = 5;
 
 class App(Frame):
     
@@ -56,9 +40,11 @@ class App(Frame):
         self.botPlayerBlack = BotPlayer()
         self.botPlayerWhite = BotPlayer()
         
-        #Current players
-        self.playerBlack = HumanPlayer()
-        self.playerWhite = HumanPlayer()
+        #Predefined game
+        self.predefGame = Game(HumanPlayer(), HumanPlayer())
+        
+        #Current game
+        self.currentGame = self.predefGame
 
         self.initResource();
 
@@ -199,16 +185,16 @@ class App(Frame):
         self.updateStatus();
         
     def setBlackHuman(self):
-        self.playerBlack = HumanPlayer()
+        self.predefGame.black = HumanPlayer()
 
     def setBlackBot(self):
-        self.playerBlack = self.botPlayerBlack
+        self.predefGame.black = self.botPlayerBlack
         
     def setWhiteHuman(self):
-        self.playerWhite = HumanPlayer()
+        self.predefGame.white = HumanPlayer()
         
     def setWhiteBot(self):
-        self.playerWhite = self.botPlayerWhite
+        self.predefGame.white = self.botPlayerWhite
 
     def isVcf(self):
         vcf = True;
@@ -392,9 +378,9 @@ class App(Frame):
                         color = self.nextColor()
                         currEngine = None
                         if(color == Move.BLACK):
-                            currEngine = self.playerBlack.engine;
+                            currEngine = self.currentGame.black.engine;
                         else:
-                            currEngine = self.playerWhite.engine;
+                            currEngine = self.currentGame.white.engine;
                             
                         currEngine.next(self.moveList);
                         move = self.waitForMove(currEngine);
@@ -437,9 +423,9 @@ class App(Frame):
             # Check format: Searching 31/37
             currentEngine = None
             if self.nextColor() == Move.BLACK:
-                currentEngine = self.playerBlack.engine;
+                currentEngine = self.currentGame.black.engine;
             else:
-                currentEngine = self.playerWhite.engine;
+                currentEngine = self.currentGame.white.engine;
                 
             msg = currentEngine.name+' Thinking.';
             
@@ -459,37 +445,27 @@ class App(Frame):
         return Move.NONE;
 
     def newGame(self):
+        #Release engines
         self.botPlayerBlack.release();
         self.botPlayerWhite.release();
+        self.currentGame.release();
+        
         self.initBoard();
         
-        if(not self.playerBlack.is_ready()):
+        b_ready, w_ready = self.currentGame.is_ready()
+        if(not b_ready):
             messagebox.showinfo("Error","Black engine is not ready");
             return
-        elif (not self.playerWhite.is_ready()):
+        elif (not w_ready):
             messagebox.showinfo("Error","White engine is not ready");
             return
             
         #Prepare players
-        self.playerBlack.start_player(Move.BLACK, self.aiLevel.get(), self.isVcf())
-        self.playerWhite.start_player(Move.WHITE, self.aiLevel.get(), self.isVcf())
+        self.currentGame.start_players(self.aiLevel.get(), self.isVcf())
         
-        black = self.playerBlack.type
-        white = self.playerWhite.type
-        
-        if black == Player.HUMAN and white == Player.HUMAN:
-            self.toGameMode(GameState.Human2Human);
-            self.toGameState(GameState.WaitForHumanFirst);
-        elif black == Player.BOT and white == Player.BOT:
-            self.toGameMode(GameState.AI2AI);
-            self.toGameState(GameState.WaitForEngine);
-        else:
-            if black == Player.BOT:
-                self.toGameState(GameState.WaitForEngine);
-                self.toGameMode(GameState.AI2Human);
-            else:
-                self.toGameState(GameState.WaitForHumanFirst);
-                self.toGameMode(GameState.AI2Human);
+        mode, next_state = self.currentGame.get_game_state()
+        self.toGameMode(mode)
+        self.toGameState(next_state)
 
     def addToMoveList(self, move):
         # Rerender pre move
