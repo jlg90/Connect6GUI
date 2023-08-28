@@ -186,7 +186,7 @@ class Tournament:
             tuples.append((self.players[i], scores[i], bucholtz[i]))
         
         #Sort by score and bucholtz as tie-breaker
-        sorted_list = sorted(tuples, key=lambda x: (x[1], x[2]))
+        sorted_list = sorted(tuples, key=lambda x: (x[1], x[2]), reverse=True)
         
         return sorted_list
         
