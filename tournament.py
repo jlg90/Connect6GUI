@@ -140,18 +140,80 @@ class Tournament:
         reader = PlayerReader()
         self.players = reader.read_from_file(f)
         
+        #Calculate scores for every player
     def calculate_scores(self):
-        scores = []
+        scores = [0] * len(self.players)
+        
+        for game in self.games:
+            idb = game.black.id
+            idw = game.white.id
+            
+            if game.result == Move.NONE:
+                scores[idb] += 1
+                scores[idw] += 1
+            elif game.result == Move.BLACK:
+                scores[idb] += 2
+            elif game.result == Move.WHITE:
+                scores[idw] += 2
         
         return scores
+        
+    #Calculate tie-breaker
+    def calculate_bucholtz(self, scores):
+        bucholtz = [0] * len(self.players)
+        
+        for game in self.games:
+            idb = game.black.id
+            idw = game.white.id
+            
+            if game.result == Move.NONE:
+                bucholtz[idb] += scores[idw]
+                bucholtz[idw] += scores[idb]
+            elif game.result == Move.BLACK:
+                bucholtz[idb] += scores[idw]*2
+            elif game.result == Move.WHITE:
+                bucholtz[idw] += scores[idb]*2
+                
+        return bucholtz
+    
+    #Get final clasification   
+    def get_classification(self):
+        scores = self.calculate_scores()
+        bucholtz = self.calculate_bucholtz(scores)
+        
+        tuples = []
+        for i in range(0, len(scores)):
+            tuples.append((self.players[i], scores[i], bucholtz[i]))
+        
+        #Sort by score and bucholtz as tie-breaker
+        sorted_list = sorted(tuples, key=lambda x: (x[1], x[2]))
+        
+        return sorted_list
         
     def save_results(self, f):
         #Print players
         f.write('Players:\n')
         for player in self.players:
             f.write(str(player.id))
-            f.write(";")
+            f.write(",")
             f.write(player.name)
+            f.write(";")
+        f.write("\n")
+        
+        #Print classification
+        f.write('Classification:\n')
+        classification = self.get_classification()
+        for i in range(0, len(classification)):
+            player, score, bucholtz = classification[i]
+            f.write(str(i+1))
+            f.write(",")
+            f.write(str(player.id))
+            f.write(",")
+            f.write(player.name)
+            f.write(",")
+            f.write(str(score))
+            f.write(",")
+            f.write(str(bucholtz))
             f.write(";")
         f.write("\n")
         
@@ -161,15 +223,15 @@ class Tournament:
             black = game.black
             white = game.white
             f.write(str(black.id))
-            f.write(";")
+            f.write(",")
             f.write(black.name)
-            f.write(";")
+            f.write(",")
             f.write(str(white.id))
-            f.write(";")
+            f.write(",")
             f.write(white.name)
-            f.write(";")
+            f.write(",")
             f.write(str(game.result))
-            f.write(";")
+            f.write(",")
             
             #Write moves
             for move in game.moves:
@@ -177,6 +239,8 @@ class Tournament:
                 f.write(move)
             
             f.write('\n')
+            
+        
             
             
         

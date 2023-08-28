@@ -454,7 +454,7 @@ class App(Frame):
                                 if self.gameState == GameState.WaitForEngine and self.gameMode == GameState.AI2Human:
                                     self.toGameState(GameState.WaitForHumanFirst);
                                     
-                            sleep(0.1)
+                            sleep(0.05)
                             
                         else:
                             sleep(0.1);
