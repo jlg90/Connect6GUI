@@ -81,12 +81,14 @@ class Game:
         self.white = white
         self.result = -1
         self.moves = []
+        self.times = []
         
     def release(self):
         self.black.release()
         self.white.release()
         self.result = -1
         self.moves = []
+        self.times = []
         
     def is_ready(self):
         return self.black.is_ready(), self.white.is_ready()
@@ -237,6 +239,12 @@ class Tournament:
             for move in game.moves:
                 move = move.toPlaceCmd().strip()+" "
                 f.write(move)
+                
+            f.write(",")
+            #Write times
+            for t in game.times:
+                f.write(str(t))
+                f.write(" ")
             
             f.write('\n')
             

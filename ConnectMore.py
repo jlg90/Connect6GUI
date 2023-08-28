@@ -22,7 +22,7 @@ import os;
 import random;
 from tournament import *
 from engine import *
-import copy
+import time
 
 if os.name == 'nt':
     from subprocess import STARTUPINFO;
@@ -46,6 +46,8 @@ class App(Frame):
         
         #Current game
         self.currentGame = self.predefGame
+        #Time
+        self.currentTime = time.process_time()
         
         #Tournament
         self.tournament = Tournament()
@@ -365,6 +367,7 @@ class App(Frame):
 
     def initBoard(self):
         self.moveList = [];
+        self.times = []
         for i in range(Move.EDGE):
             for j in range(Move.EDGE):
                 self.unplaceColor(i, j);
@@ -489,6 +492,7 @@ class App(Frame):
             
             #Copy moves and result
             self.currentGame.moves = self.moveList
+            self.currentGame.times = self.times
             self.currentGame.result = self.winner
             
             nextGame = self.tournament.next_game()
@@ -563,6 +567,7 @@ class App(Frame):
         self.setBotNames()
         
         mode, next_state = self.currentGame.get_game_state()
+        self.currentTime = time.process_time()
         self.toGameMode(mode)
         self.toGameState(next_state)
 
@@ -590,6 +595,11 @@ class App(Frame):
     def makeMove(self, move):
         if move.isValidated():
             if(self.gameState != GameState.Win and self.gameState != GameState.Draw):
+                #Calculate time spent
+                t_end = time.process_time()
+                t_delayed = t_end - self.currentTime
+                self.times.append(t_delayed)
+                
                 self.addToMoveList(move);
                 nextValidMove = self.placeStone(move.color, move.x1, move.y1);
                 if(nextValidMove):
@@ -597,6 +607,8 @@ class App(Frame):
                 else:
                     move.x2 = move.x1
                     move.y2 = move.y1
+                    
+        self.currentTime = time.process_time()
             # print('Made move:', move);
         return move;
 
