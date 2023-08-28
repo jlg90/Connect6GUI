@@ -201,6 +201,7 @@ class App(Frame):
         
     def newSingleGame(self):
         self.showDisplayMsg = True
+        self.tournament = Tournament()
         self.newGame()
         
     def setBlackHuman(self):
@@ -243,6 +244,7 @@ class App(Frame):
         try:
             self.tournament.save_results(f)
             f.close()
+            print('Tournament results saved');
         except Exception as e:
             messagebox.showinfo("Error","Error to save tournament. \n errors: " + str(e));
     

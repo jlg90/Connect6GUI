@@ -22,6 +22,7 @@ class Player:
     
     def __init__(self):
         self.type = None
+        self.id = -1
         
     def get_name(self):
         return ""
@@ -139,10 +140,17 @@ class Tournament:
         reader = PlayerReader()
         self.players = reader.read_from_file(f)
         
+    def calculate_scores(self):
+        scores = []
+        
+        return scores
+        
     def save_results(self, f):
         #Print players
         f.write('Players:\n')
         for player in self.players:
+            f.write(str(player.id))
+            f.write(";")
             f.write(player.name)
             f.write(";")
         f.write("\n")
@@ -152,7 +160,11 @@ class Tournament:
         for game in self.games:
             black = game.black
             white = game.white
+            f.write(str(black.id))
+            f.write(";")
             f.write(black.name)
+            f.write(";")
+            f.write(str(white.id))
             f.write(";")
             f.write(white.name)
             f.write(";")
@@ -193,6 +205,7 @@ class PlayerReader:
         # Using readline()
         file1 = open(path, 'r')
         players = []
+        idx = 0
          
         while True:
          
@@ -212,6 +225,8 @@ class PlayerReader:
                 player.start_player(Move.BLACK, 1, True);
                 player.release()
                 players.append(player)
+                player.id = idx
+                idx = idx+1
             except Exception as e:
                 print("Error to load the engine: " + player.path + ", errors: " + str(e));
              
